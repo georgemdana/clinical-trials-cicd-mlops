@@ -1,4 +1,4 @@
-# Mitsui MLOps Pipeline with Azure DevOps and Snowflake
+# MLOps Pipeline with Azure DevOps and Snowflake
 
 This project demonstrates a production-ready Machine Learning Operations (MLOps) pipeline that integrates Azure DevOps with Snowflake. The pipeline automates the entire ML lifecycle from feature engineering to model deployment.
 
@@ -55,7 +55,7 @@ mlops/
 3. **Local Development Setup**
    ```bash
    # Create virtual environment
-   python -m venv venv_mitsui_py310
+   python -m venv venv_xyz_py310
    source venv_xyz_py310/bin/activate  # Unix/macOS
    # or
    .\venv_xyz_py310\Scripts\activate  # Windows
