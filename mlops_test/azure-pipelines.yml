@@ -1,0 +1,66 @@
+# Triggers the pipeline for main, dev, and qa branches.
+trigger:
+  branches:
+    include:
+    - main
+
+# Use a self-hosted agent pool
+pool:
+  name: Default
+
+# References a variable group called snowflake-credentials which should contain all your Snowflake connection details.
+variables:
+  - group: snowflake-credentials
+
+# Sets up Python 3.8 and installs the necessary dependencies.
+stages:
+- stage: PythonSetup
+  jobs:
+  - job: SetupPython
+    steps:
+    - script: |
+        /opt/homebrew/opt/python@3.8/bin/python3.8 --version
+        /opt/homebrew/opt/python@3.8/bin/python3.8 -m pip install --upgrade pip
+        /opt/homebrew/opt/python@3.8/bin/python3.8 -m pip install snowflake-connector-python
+      displayName: 'Setup Python and Install dependencies'
+
+- stage: DownloadPrivateKey
+  dependsOn: PythonSetup
+  jobs:
+  - job: DownloadPrivateKeyFile
+    steps:
+    - task: DownloadSecureFile@1
+      name: privateKeyFile
+      inputs:
+        secureFile: '$(private_key_file_name)'
+      displayName: 'Download Snowflake private key'
+    - script: |
+        mkdir .secure_files
+        cp $(privateKeyFile.secureFilePath) .secure_files/
+      displayName: 'Copy private key to secure files directory'
+
+- stage: TestConnection
+  dependsOn: DownloadPrivateKey
+  jobs:
+  - job: TestSnowflakeConnection
+    steps:
+    - task: DownloadSecureFile@1
+      name: privateKeyFile
+      inputs:
+        secureFile: '$(private_key_file_name)'
+      displayName: 'Download Snowflake private key'
+    - script: |
+        mkdir -p .secure_files
+        cp $(privateKeyFile.secureFilePath) .secure_files/
+        ls -la .secure_files/
+        python test_connection.py
+      env:
+        SNOWFLAKE_ACCOUNT: $(account)
+        SNOWFLAKE_USER: $(user)
+        #SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: $(private_key_file_pwd)
+        SNOWFLAKE_PRIVATE_KEY_FILE: '.secure_files/$(private_key_file_name)'
+        SNOWFLAKE_WAREHOUSE: $(warehouse)
+        SNOWFLAKE_ROLE: $(role)
+        SNOWFLAKE_DATABASE: $(database)
+        SNOWFLAKE_SCHEMA: $(schema)
+      displayName: 'Test Snowflake connection'

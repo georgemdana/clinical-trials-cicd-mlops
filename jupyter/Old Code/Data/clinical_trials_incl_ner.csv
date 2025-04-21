@@ -1,0 +1,4 @@
+Trial_Name,Trial_ID,Inclusion_Criteria,Category,Source_Columns
+Test_Trial,123,Aged 18 or over.,AGE,DEMOGRAHPICS.age
+Test_Trial,123,Female,GENDER,DEMOGRAHPICS.gender
+Test_Trial,123,Diagnosed with Lung Cancer,DISEASE,DIAGNOSIS.targetdetaileddiagnosisgroup

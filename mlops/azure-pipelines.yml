@@ -1,0 +1,152 @@
+# Triggers the pipeline for main, dev, and qa branches.
+trigger:
+  branches:
+    include:
+    - main
+    - snowflakeconnection
+    - agemodel
+    - tasks
+
+pool:
+  vmImage: ubuntu-latest
+
+# References a variable group called snowflake-credentials which should contain all your Snowflake connection details.
+variables:
+  - group: snowflake-credentials
+
+# Sets up Python 3.8 and installs the necessary dependencies.
+stages:
+- stage: PythonSetup
+  jobs:
+  - job: SetupPython
+    steps:
+    - script: |
+        /opt/homebrew/opt/python@3.8/bin/python3.8 --version
+        /opt/homebrew/opt/python@3.8/bin/python3.8 -m pip install --upgrade pip
+        /opt/homebrew/opt/python@3.8/bin/python3.8 -m pip install snowflake-connector-python
+      displayName: 'Setup Python and Install dependencies'
+
+# Sets up private key in secure files
+- stage: DownloadPrivateKey
+  dependsOn: PythonSetup
+  jobs:
+  - job: DownloadPrivateKeyFile
+    steps:
+    - task: DownloadSecureFile@1
+      name: privateKeyFile
+      inputs:
+        secureFile: '$(private_key_file_name)'
+      displayName: 'Download Snowflake private key'
+    - script: |
+        mkdir .secure_files
+        cp $(privateKeyFile.secureFilePath) .secure_files/
+      displayName: 'Copy private key to secure files directory'
+
+# Test Snowflake Connection
+- stage: TestConnection
+  dependsOn: DownloadPrivateKey
+  jobs:
+  - job: TestSnowflakeConnection
+    steps:
+    - task: DownloadSecureFile@1
+      name: privateKeyFile
+      inputs:
+        secureFile: '$(private_key_file_name)'
+      displayName: 'Download Snowflake private key'
+    - script: |
+        mkdir -p .secure_files
+        cp $(privateKeyFile.secureFilePath) .secure_files/
+        ls -la .secure_files/
+        python test_connection.py
+      env:
+        SNOWFLAKE_ACCOUNT: $(account)
+        SNOWFLAKE_USER: $(user)
+        #SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: $(private_key_file_pwd)
+        SNOWFLAKE_PRIVATE_KEY_FILE: '.secure_files/$(private_key_file_name)'
+        SNOWFLAKE_WAREHOUSE: $(warehouse)
+        SNOWFLAKE_ROLE: $(role)
+        SNOWFLAKE_DATABASE: $(database)
+        SNOWFLAKE_SCHEMA: $(schema)
+      displayName: 'Test Snowflake connection'
+  
+# Build Features, Place in Feature Store in Snowflake
+- stage: BuildFeatures
+  dependsOn: TestConnection
+  jobs:
+  - job: BuildAgeFeature
+    steps:
+    - task: DownloadSecureFile@1
+      name: privateKeyFile
+      inputs:
+        secureFile: '$(private_key_file_name)'
+      displayName: 'Download Snowflake private key'
+    - script: |
+        mkdir -p .secure_files
+        cp $(privateKeyFile.secureFilePath) .secure_files/
+        ls -la .secure_files/
+        python features/age_feature.py
+        python features/trial_age_feature.py
+      env:
+        SNOWFLAKE_ACCOUNT: $(account)
+        SNOWFLAKE_USER: $(user)
+        #SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: $(private_key_file_pwd)
+        SNOWFLAKE_PRIVATE_KEY_FILE: '.secure_files/$(private_key_file_name)'
+        SNOWFLAKE_WAREHOUSE: $(warehouse)
+        SNOWFLAKE_ROLE: $(role)
+        SNOWFLAKE_DATABASE: $(database)
+        SNOWFLAKE_SCHEMA: $(schema)
+      displayName: 'Build Features'
+
+# Build Model, Place in Model Registry in Snowflake
+- stage: BuildModel
+  dependsOn: BuildFeatures
+  jobs:
+  - job: BuildAgeModel
+    steps:
+    - task: DownloadSecureFile@1
+      name: privateKeyFile
+      inputs:
+        secureFile: '$(private_key_file_name)'
+      displayName: 'Download Snowflake private key'
+    - script: |
+        mkdir -p .secure_files
+        cp $(privateKeyFile.secureFilePath) .secure_files/
+        ls -la .secure_files/
+        python models/age_model_sproc.py
+      env:
+        SNOWFLAKE_ACCOUNT: $(account)
+        SNOWFLAKE_USER: $(user)
+        #SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: $(private_key_file_pwd)
+        SNOWFLAKE_PRIVATE_KEY_FILE: '.secure_files/$(private_key_file_name)'
+        SNOWFLAKE_WAREHOUSE: $(warehouse)
+        SNOWFLAKE_ROLE: $(role)
+        SNOWFLAKE_DATABASE: $(database)
+        SNOWFLAKE_SCHEMA: $(schema)
+      displayName: 'Build Models'
+
+# Build Tasks in Snowflake to call the models when data changes
+- stage: ModelTasks
+  dependsOn: BuildModel
+  jobs:
+  - job: BuildAgeModelTask
+    steps:
+    - task: DownloadSecureFile@1
+      name: privateKeyFile
+      inputs:
+        secureFile: '$(private_key_file_name)'
+      displayName: 'Download Snowflake private key'
+    - script: |
+        mkdir -p .secure_files
+        cp $(privateKeyFile.secureFilePath) .secure_files/
+        ls -la .secure_files/
+        python tasks/model_tasks.py
+      env:
+        SNOWFLAKE_ACCOUNT: $(account)
+        SNOWFLAKE_USER: $(user)
+        #SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: $(private_key_file_pwd)
+        SNOWFLAKE_PRIVATE_KEY_FILE: '.secure_files/$(private_key_file_name)'
+        SNOWFLAKE_WAREHOUSE: $(warehouse)
+        SNOWFLAKE_ROLE: $(role)
+        SNOWFLAKE_DATABASE: $(database)
+        SNOWFLAKE_SCHEMA: $(schema)
+      displayName: 'Build Age Task'
