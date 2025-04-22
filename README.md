@@ -142,10 +142,3 @@ Common issues and solutions:
 - [Azure DevOps Documentation](https://docs.microsoft.com/en-us/azure/devops/)
 - [MLOps Best Practices](https://docs.microsoft.com/en-us/azure/machine-learning/concept-model-management-and-deployment)
 
-## 📄 License
-
-This project is proprietary and confidential.
-
-## 👥 Contact
-
-For questions or support, please contact the MLOps team. 
