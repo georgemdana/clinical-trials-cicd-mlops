@@ -38,7 +38,7 @@ mlops/
    ```sql
    -- Create required Snowflake objects
    CREATE WAREHOUSE IF NOT EXISTS COMPUTE_WH;
-   CREATE DATABASE IF NOT EXISTS MITSUI_DEV;
+   CREATE DATABASE IF NOT EXISTS XYZ_DEV;
    CREATE SCHEMA IF NOT EXISTS FEATURE_STORE;
    ```
 
@@ -55,7 +55,7 @@ mlops/
 3. **Local Development Setup**
    ```bash
    # Create virtual environment
-   python -m venv venv_mitsui_py310
+   python -m venv venv_xyz_py310
    source venv_mitsui_py310/bin/activate  # Unix/macOS
    # or
    .\venv_mitsui_py310\Scripts\activate  # Windows
